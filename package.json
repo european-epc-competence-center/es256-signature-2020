@@ -1,0 +1,44 @@
+{
+  "name": "es256-signature-2020",
+  "version": "1.0.0",
+  "description": "ES256Signature2020 Linked Data Proof suite for use with jsonld-signatures using ECDSA with P-256 curve.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": "./dist/index.js",
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "test": "mocha -r ts-node/register test/**/*.ts",
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/european-epc-competence-center/es256-signature-2020.git"
+  },
+  "author": "Christian Fries",
+  "license": "BSD-3-Clause",
+  "engines": {
+    "node": ">=18"
+  },
+  "bugs": {
+    "url": "https://github.com/european-epc-competence-center/es256-signature-2020/issues"
+  },
+  "homepage": "https://github.com/european-epc-competence-center/es256-signature-2020#readme",
+  "dependencies": {
+    "base58-universal": "^2.0.0",
+    "jsonld": "^5.2.0",
+    "jsonld-signatures": "^11.3.0"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.16",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.12.12",
+    "chai": "^4.3.4",
+    "jose": "^5.4.0",
+    "mocha": "^10.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}

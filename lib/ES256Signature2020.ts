@@ -6,6 +6,7 @@
 import * as base58btc from 'base58-universal';
 // @ts-ignore
 import jsigs from 'jsonld-signatures';
+import * as jose from 'jose';
 const { suites: { LinkedDataSignature } } = jsigs;
 
 // Use the security context v2 which supports JsonWebKey2020
@@ -56,10 +57,40 @@ export class ES256Signature2020 extends LinkedDataSignature {
   constructor({
     key, signer, verifier, proof, date, useNativeCanonize, canonizeOptions
   }: any = {}) {
-    // If key is provided but doesn't have signer/verifier methods,
-    // extract them before calling super
-    if (key && typeof key.signer === 'function' && !signer) {
-      // Key has signer/verifier methods - they will be called by super
+    // If no signer is provided, create a default signer using jose
+    if (!signer && key && key.privateKey) {
+      signer = () =>
+        Promise.resolve({
+          sign: async (options: { data: string }): Promise<Uint8Array> => {
+            // Use jose library for ES256 signing to get raw signature bytes
+            const privateKeyJwk = key.privateKey as jose.JWK;
+
+            // Import the private key using jose
+            const privateKey = await jose.importJWK({
+              ...privateKeyJwk,
+              alg: "ES256",
+            } as jose.JWK);
+
+            // The data is already the JWT signing input (header.payload)
+            // For proper JWT signing, we need to split and use the payload only
+            const [headerPart, payloadPart] = options.data.split(".");
+
+            // Decode the header to get the algorithm and other claims
+            const headerBytes = jose.base64url.decode(headerPart);
+            const headerObj = JSON.parse(new TextDecoder().decode(headerBytes));
+
+            // Decode the payload
+            const payloadBytes = jose.base64url.decode(payloadPart);
+
+            // Create a JWS with the decoded payload and header
+            const jws = await new jose.FlattenedSign(payloadBytes)
+              .setProtectedHeader(headerObj)
+              .sign(privateKey);
+
+            // Return the raw signature bytes
+            return jose.base64url.decode(jws.signature);
+          },
+        });
     }
 
     super({

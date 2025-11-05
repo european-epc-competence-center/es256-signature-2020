@@ -6,7 +6,7 @@ import { expect } from 'chai';
 // @ts-ignore
 import jsigs from 'jsonld-signatures';
 import { ES256Signature2020 } from '../lib/ES256Signature2020';
-import { mockCredential, mockDidDocument, jwsContext } from './mock-data';
+import { mockCredential, jwsContext } from './mock-data';
 import * as jose from 'jose';
 // @ts-ignore
 import { securityLoader } from '@digitalbazaar/security-document-loader';

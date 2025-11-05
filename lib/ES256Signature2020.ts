@@ -59,37 +59,7 @@ export class ES256Signature2020 extends LinkedDataSignature {
   }: any = {}) {
     // If no signer is provided, create a default signer using jose and attach it to the key
     if (!signer && key && key.privateKey && !key.signer) {
-      key.signer = () => ({
-        sign: async (options: { data: string }): Promise<Uint8Array> => {
-          // Use jose library for ES256 signing to get raw signature bytes
-          const privateKeyJwk = key.privateKey as jose.JWK;
-
-          // Import the private key using jose
-          const privateKey = await jose.importJWK({
-            ...privateKeyJwk,
-            alg: "ES256",
-          } as jose.JWK);
-
-          // The data is already the JWT signing input (header.payload)
-          // For proper JWT signing, we need to split and use the payload only
-          const [headerPart, payloadPart] = options.data.split(".");
-
-          // Decode the header to get the algorithm and other claims
-          const headerBytes = jose.base64url.decode(headerPart);
-          const headerObj = JSON.parse(new TextDecoder().decode(headerBytes));
-
-          // Decode the payload
-          const payloadBytes = jose.base64url.decode(payloadPart);
-
-          // Create a JWS with the decoded payload and header
-          const jws = await new jose.FlattenedSign(payloadBytes)
-            .setProtectedHeader(headerObj)
-            .sign(privateKey);
-
-          // Return the raw signature bytes
-          return jose.base64url.decode(jws.signature);
-        },
-      });
+      key.signer = ES256Signature2020._createDefaultSigner(key);
     }
 
     super({
@@ -105,6 +75,47 @@ export class ES256Signature2020 extends LinkedDataSignature {
 
     // ES256 uses JsonWebKey2020 key type
     this.requiredKeyType = 'JsonWebKey2020';
+  }
+
+  /**
+   * Creates a default signer function for ES256 signing using jose library.
+   * 
+   * @param {object} key - Key object containing the private key in JWK format.
+   * @returns {Function} A signer function that returns an object with a sign method.
+   * @private
+   */
+  private static _createDefaultSigner(key: any): () => any {
+    return () => ({
+      sign: async (options: { data: string }): Promise<Uint8Array> => {
+        // Use jose library for ES256 signing to get raw signature bytes
+        const privateKeyJwk = key.privateKey as jose.JWK;
+
+        // Import the private key using jose
+        const privateKey = await jose.importJWK({
+          ...privateKeyJwk,
+          alg: "ES256",
+        } as jose.JWK);
+
+        // The data is already the JWT signing input (header.payload)
+        // For proper JWT signing, we need to split and use the payload only
+        const [headerPart, payloadPart] = options.data.split(".");
+
+        // Decode the header to get the algorithm and other claims
+        const headerBytes = jose.base64url.decode(headerPart);
+        const headerObj = JSON.parse(new TextDecoder().decode(headerBytes));
+
+        // Decode the payload
+        const payloadBytes = jose.base64url.decode(payloadPart);
+
+        // Create a JWS with the decoded payload and header
+        const jws = await new jose.FlattenedSign(payloadBytes)
+          .setProtectedHeader(headerObj)
+          .sign(privateKey);
+
+        // Return the raw signature bytes
+        return jose.base64url.decode(jws.signature);
+      },
+    });
   }
 
   /**

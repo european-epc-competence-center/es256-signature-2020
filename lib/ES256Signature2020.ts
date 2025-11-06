@@ -78,7 +78,7 @@ export class ES256Signature2020 extends LinkedDataSignature {
   }
 
   /**
-   * Creates a default signer function for ES256 signing using Web Crypto API.
+   * Creates a default signer function for ES256 signing using jose library.
    * 
    * @param {object} key - Key object containing the private key in JWK format.
    * @returns {Function} A signer function that returns an object with a sign method.
@@ -87,27 +87,19 @@ export class ES256Signature2020 extends LinkedDataSignature {
   private static _createDefaultSigner(key: any): () => any {
     return () => ({
       sign: async (options: { data: Uint8Array }): Promise<Uint8Array> => {
-        // Import the private key using Web Crypto API directly
+        // Import the private key using jose
         const privateKeyJwk = key.privateKey as jose.JWK;
-        
-        const privateKey = await crypto.subtle.importKey(
-          'jwk',
-          privateKeyJwk,
-          { name: 'ECDSA', namedCurve: 'P-256' },
-          false,
-          ['sign']
-        );
+        const privateKey = await jose.importJWK(privateKeyJwk, 'ES256');
 
-        // Sign the data directly using Web Crypto API
+        // Sign the raw bytes using jose's FlattenedSign
         // The data is already the canonicalized hash from LinkedDataSignature
-        const signature = await crypto.subtle.sign(
-          { name: 'ECDSA', hash: 'SHA-256' },
-          privateKey,
-          options.data as BufferSource
-        );
+        const jws = await new jose.FlattenedSign(options.data)
+          .setProtectedHeader({ alg: 'ES256' })
+          .sign(privateKey);
 
-        // Return the signature as Uint8Array
-        return new Uint8Array(signature);
+        // Extract the signature from the JWS object
+        // We only need the raw signature bytes
+        return jose.base64url.decode(jws.signature);
       },
     });
   }

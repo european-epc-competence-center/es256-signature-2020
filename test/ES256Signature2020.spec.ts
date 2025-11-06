@@ -3,13 +3,13 @@
  */
 
 import { expect } from 'chai';
+import * as jose from 'jose';
 // @ts-ignore
 import jsigs from 'jsonld-signatures';
 import { ES256Signature2020 } from '../lib/ES256Signature2020';
-import { mockCredential, jwsContext } from './mock-data';
-import * as jose from 'jose';
-// @ts-ignore
-import { securityLoader } from '@digitalbazaar/security-document-loader';
+import { mockCredential } from './mock-data';
+import { createDocumentLoader, createDidDocument } from './documentLoader';
+import { createVerifier } from './test-helpers';
 
 const { purposes: { AssertionProofPurpose } } = jsigs;
 
@@ -21,8 +21,6 @@ describe('ES256Signature2020', () => {
   beforeEach(async () => {
     // Generate fresh ES256 key pair for each test
     const generatedKeyPair = await jose.generateKeyPair("ES256", { extractable: true });
-
-    // Export keys to JWK format
     const privateKeyJwkRaw = await jose.exportJWK(generatedKeyPair.privateKey);
     const publicKeyJwkRaw = await jose.exportJWK(generatedKeyPair.publicKey);
 
@@ -35,50 +33,9 @@ describe('ES256Signature2020', () => {
       privateKeyJwk: privateKeyJwkRaw
     };
 
-    // Create DID document with the generated key
-    const didDocument = {
-      '@context': [
-        'https://www.w3.org/ns/did/v1',
-        'https://w3id.org/security/suites/jws-2020/v1'
-      ],
-      id: 'did:web:example.com',
-      assertionMethod: [keyPair.id],
-      verificationMethod: [keyPair]
-    };
-
-    // Set up document loader with security contexts
-    const loader = securityLoader();
-    
-    // Add JWS 2020 context
-    loader.addStatic(
-      'https://w3id.org/security/suites/jws-2020/v1',
-      jwsContext
-    );
-    
-    // Add DID document to the loader
-    loader.addStatic(
-      didDocument.id,
-      didDocument
-    );
-    
-    // Add key document to the loader
-    loader.addStatic(
-      keyPair.id,
-      keyPair
-    );
-    
-    // Build the document loader
-    const builtLoader = loader.build();
-    
-    // Wrap the document loader to handle network errors gracefully
-    documentLoader = async (url: string) => {
-      try {
-        return await builtLoader(url);
-      } catch (error: any) {
-        console.error(`Failed to load document: ${url}`, error.message);
-        throw error;
-      }
-    };
+    // Set up document loader with DID document and key
+    const didDocument = createDidDocument(keyPair);
+    documentLoader = createDocumentLoader(didDocument, keyPair);
   });
 
   describe('sign and verify', () => {
@@ -93,9 +50,7 @@ describe('ES256Signature2020', () => {
       };
 
       // Create suite with key - the default signer will be used automatically
-      suite = new ES256Signature2020({
-        key
-      });
+      suite = new ES256Signature2020({ key });
 
       // Sign the credential
       const signedCredential = await jsigs.sign(mockCredential, {
@@ -110,37 +65,9 @@ describe('ES256Signature2020', () => {
       expect(signedCredential.proof).to.have.property('proofValue');
       expect(signedCredential.proof.proofValue).to.match(/^z/);
 
-      // Import the public key for verification using jose
-      const publicKey = await jose.importJWK(keyPair.publicKeyJwk, 'ES256');
-      
-      // Create verifier using jose
-      const verifier = {
-        async verify({ data, signature }: { data: Uint8Array; signature: Uint8Array }) {
-          try {
-            // Reconstruct a flattened JWS for verification
-            const jws = {
-              protected: jose.base64url.encode(
-                new TextEncoder().encode(JSON.stringify({ alg: 'ES256' }))
-              ),
-              payload: jose.base64url.encode(data),
-              signature: jose.base64url.encode(signature)
-            };
-            
-            // Verify using jose's flattenedVerify
-            // If verification succeeds, the signature is valid
-            await jose.flattenedVerify(jws, publicKey);
-            return true;
-          } catch (e) {
-            return false;
-          }
-        },
-        id: keyPair.id
-      };
-
-      // Create suite for verification
-      const verifySuite = new ES256Signature2020({
-        verifier
-      });
+      // Create verifier and verification suite
+      const verifier = await createVerifier(keyPair.publicKeyJwk);
+      const verifySuite = new ES256Signature2020({ verifier });
 
       // Verify the signed credential
       const result = await jsigs.verify(signedCredential, {

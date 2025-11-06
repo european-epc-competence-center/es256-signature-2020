@@ -9,7 +9,6 @@ import jsigs from 'jsonld-signatures';
 import { ES256Signature2020 } from '../lib/ES256Signature2020';
 import { mockCredential } from './mock-data';
 import { createDocumentLoader, createDidDocument } from './documentLoader';
-import { createVerifier } from './test-helpers';
 
 const { purposes: { AssertionProofPurpose } } = jsigs;
 
@@ -65,9 +64,9 @@ describe('ES256Signature2020', () => {
       expect(signedCredential.proof).to.have.property('proofValue');
       expect(signedCredential.proof.proofValue).to.match(/^z/);
 
-      // Create verifier and verification suite
-      const verifier = await createVerifier(keyPair.publicKeyJwk);
-      const verifySuite = new ES256Signature2020({ verifier });
+      // Create verification suite without explicit verifier
+      // The default verifier will be created automatically from the verification method
+      const verifySuite = new ES256Signature2020();
 
       // Verify the signed credential
       const result = await jsigs.verify(signedCredential, {

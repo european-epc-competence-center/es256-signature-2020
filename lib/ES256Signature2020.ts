@@ -105,6 +105,38 @@ export class ES256Signature2020 extends LinkedDataSignature {
   }
 
   /**
+   * Creates a default verifier function for ES256 verification using jose library.
+   * 
+   * @param {object} publicKeyJwk - Public key in JWK format.
+   * @returns {Promise<object>} A verifier object with a verify method.
+   * @private
+   */
+  private static async _createDefaultVerifier(publicKeyJwk: any): Promise<any> {
+    const publicKey = await jose.importJWK(publicKeyJwk, 'ES256');
+    
+    return {
+      async verify({ data, signature }: { data: Uint8Array; signature: Uint8Array }): Promise<boolean> {
+        try {
+          // Reconstruct a flattened JWS for verification
+          const jws = {
+            protected: jose.base64url.encode(
+              new TextEncoder().encode(JSON.stringify({ alg: 'ES256' }))
+            ),
+            payload: jose.base64url.encode(data),
+            signature: jose.base64url.encode(signature)
+          };
+          
+          // Verify using jose's flattenedVerify
+          await jose.flattenedVerify(jws, publicKey);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+    };
+  }
+
+  /**
    * Adds a signature (proofValue) field to the proof object. Called by
    * LinkedDataSignature.createProof().
    *
@@ -151,11 +183,18 @@ export class ES256Signature2020 extends LinkedDataSignature {
     const signatureBytes = base58btc.decode(proofValue.substr(1));
 
     let { verifier } = this;
-    if (!verifier) {
-      // For ES256, we need to create a verifier from the verification method
-      // This will be handled by the key infrastructure
-      throw new Error('Verifier must be provided for ES256 verification.');
+    
+    // Create default verifier if none provided
+    if (!verifier && verificationMethod?.publicKeyJwk) {
+      verifier = await ES256Signature2020._createDefaultVerifier(
+        verificationMethod.publicKeyJwk
+      );
     }
+    
+    if (!verifier) {
+      throw new Error('No verifier available and cannot create default verifier from verification method.');
+    }
+    
     return verifier.verify({ data: verifyData, signature: signatureBytes });
   }
 

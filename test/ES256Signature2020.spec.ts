@@ -110,17 +110,23 @@ describe('ES256Signature2020', () => {
       expect(signedCredential.proof).to.have.property('proofValue');
       expect(signedCredential.proof.proofValue).to.match(/^z/);
 
-      // Import the public key for verification
-      const publicKey = await jose.importJWK(keyPair.publicKeyJwk, 'ES256');
+      // Import the public key for verification using Web Crypto API
+      const publicKey = await crypto.subtle.importKey(
+        'jwk',
+        keyPair.publicKeyJwk,
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        false,
+        ['verify']
+      );
       
-      // Create verifier using jose
+      // Create verifier using Web Crypto API
       const verifier = {
         async verify({ data, signature }: { data: Uint8Array; signature: Uint8Array }) {
           try {
-            // Use Web Crypto API through Node.js crypto for verification
+            // Use Web Crypto API for verification
             const isValid = await crypto.subtle.verify(
               { name: 'ECDSA', hash: 'SHA-256' },
-              publicKey as CryptoKey,
+              publicKey,
               signature as BufferSource,
               data as BufferSource
             );

@@ -78,7 +78,7 @@ export class ES256Signature2020 extends LinkedDataSignature {
   }
 
   /**
-   * Creates a default signer function for ES256 signing using jose library.
+   * Creates a default signer function for ES256 signing using Web Crypto API.
    * 
    * @param {object} key - Key object containing the private key in JWK format.
    * @returns {Function} A signer function that returns an object with a sign method.
@@ -86,34 +86,28 @@ export class ES256Signature2020 extends LinkedDataSignature {
    */
   private static _createDefaultSigner(key: any): () => any {
     return () => ({
-      sign: async (options: { data: string }): Promise<Uint8Array> => {
-        // Use jose library for ES256 signing to get raw signature bytes
+      sign: async (options: { data: Uint8Array }): Promise<Uint8Array> => {
+        // Import the private key using Web Crypto API directly
         const privateKeyJwk = key.privateKey as jose.JWK;
+        
+        const privateKey = await crypto.subtle.importKey(
+          'jwk',
+          privateKeyJwk,
+          { name: 'ECDSA', namedCurve: 'P-256' },
+          false,
+          ['sign']
+        );
 
-        // Import the private key using jose
-        const privateKey = await jose.importJWK({
-          ...privateKeyJwk,
-          alg: "ES256",
-        } as jose.JWK);
+        // Sign the data directly using Web Crypto API
+        // The data is already the canonicalized hash from LinkedDataSignature
+        const signature = await crypto.subtle.sign(
+          { name: 'ECDSA', hash: 'SHA-256' },
+          privateKey,
+          options.data as BufferSource
+        );
 
-        // The data is already the JWT signing input (header.payload)
-        // For proper JWT signing, we need to split and use the payload only
-        const [headerPart, payloadPart] = options.data.split(".");
-
-        // Decode the header to get the algorithm and other claims
-        const headerBytes = jose.base64url.decode(headerPart);
-        const headerObj = JSON.parse(new TextDecoder().decode(headerBytes));
-
-        // Decode the payload
-        const payloadBytes = jose.base64url.decode(payloadPart);
-
-        // Create a JWS with the decoded payload and header
-        const jws = await new jose.FlattenedSign(payloadBytes)
-          .setProtectedHeader(headerObj)
-          .sign(privateKey);
-
-        // Return the raw signature bytes
-        return jose.base64url.decode(jws.signature);
+        // Return the signature as Uint8Array
+        return new Uint8Array(signature);
       },
     });
   }

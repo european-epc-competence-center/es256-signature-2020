@@ -9,7 +9,11 @@
     "dist/"
   ],
   "scripts": {
-    "test": "mocha -r ts-node/register test/**/*.ts",
+    "test": "npm run test-node",
+    "test-node": "cross-env NODE_ENV=test mocha --preserve-symlinks -t 30000 -A -R ${REPORTER:-spec} --require test/test-mocha.js test/*.spec.ts",
+    "coverage": "cross-env NODE_ENV=test c8 npm run test-node",
+    "coverage-ci": "cross-env NODE_ENV=test c8 --reporter=lcovonly --reporter=text-summary --reporter=text npm run test-node",
+    "coverage-report": "c8 report",
     "build": "tsc",
     "prepublishOnly": "npm run build",
     "lint": "tsc --noEmit",
@@ -39,7 +43,9 @@
     "@types/chai": "^4.3.16",
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.12.12",
+    "c8": "^10.1.2",
     "chai": "^4.3.4",
+    "cross-env": "^7.0.3",
     "mocha": "^10.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"

@@ -11,7 +11,9 @@
   "scripts": {
     "test": "mocha -r ts-node/register test/**/*.ts",
     "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "lint": "tsc --noEmit",
+    "release": "node scripts/release.js"
   },
   "repository": {
     "type": "git",

@@ -58,8 +58,6 @@ describe('ES256Signature2020', () => {
         documentLoader
       });
 
-
-      console.log(JSON.stringify(signedCredential.proof, null, 2));
       // Verify the credential has a proof
       expect(signedCredential).to.have.property('proof');
       expect(signedCredential.proof).to.have.property('type', 'EcdsaSecp256r1Signature2019');

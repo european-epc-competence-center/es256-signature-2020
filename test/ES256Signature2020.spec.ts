@@ -9,6 +9,8 @@ import jsigs from 'jsonld-signatures';
 import { ES256Signature2020 } from '../lib/ES256Signature2020';
 import { mockCredential } from './mock-data';
 import { createDocumentLoader, createDidDocument } from './documentLoader';
+// @ts-ignore
+import * as EcdsaMultikey from '@digitalbazaar/ecdsa-multikey';
 
 const { purposes: { AssertionProofPurpose } } = jsigs;
 
@@ -52,7 +54,7 @@ describe('ES256Signature2020', () => {
       suite = new ES256Signature2020({ key });
 
       // Sign the credential
-      const signedCredential = await jsigs.sign(mockCredential, {
+      const signedCredential = await jsigs.sign({ ...mockCredential }, {
         suite,
         purpose: new AssertionProofPurpose(),
         documentLoader
@@ -66,6 +68,44 @@ describe('ES256Signature2020', () => {
 
       // Create verification suite without explicit verifier
       // The default verifier will be created automatically from the verification method
+      const verifySuite = new ES256Signature2020();
+
+      // Verify the signed credential
+      const result = await jsigs.verify(signedCredential, {
+        suite: verifySuite,
+        purpose: new AssertionProofPurpose(),
+        documentLoader
+      });
+
+      // Check verification result
+      expect(result).to.have.property('verified', true);
+    });
+
+    it('should sign and verify a credential using EcdsaMultikey', async () => {
+      // Create EcdsaMultikey from the existing keyPair's JWK
+      const ecdsaMultikey = await EcdsaMultikey.fromJwk({
+        jwk: keyPair.privateKeyJwk,
+        secretKey: true,
+        id: keyPair.id,
+        controller: keyPair.controller
+      });
+
+      // Create suite with the EcdsaMultikey - it has built-in signer
+      suite = new ES256Signature2020({ key: ecdsaMultikey });
+
+      // Sign the credential
+      const signedCredential = await jsigs.sign({ ...mockCredential }, {
+        suite,
+        purpose: new AssertionProofPurpose(),
+        documentLoader
+      });
+
+      // Verify the credential has a proof
+      expect(signedCredential).to.have.property('proof');
+      expect(signedCredential.proof).to.have.property('type', 'EcdsaSecp256r1Signature2019');
+      expect(signedCredential.proof).to.have.property('proofValue');
+      expect(signedCredential.proof.proofValue).to.match(/^z/);
+      
       const verifySuite = new ES256Signature2020();
 
       // Verify the signed credential

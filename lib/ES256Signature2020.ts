@@ -6,7 +6,6 @@
 import * as base58btc from 'base58-universal';
 // @ts-ignore
 import jsigs from 'jsonld-signatures';
-import * as jose from 'jose';
 const { suites: { LinkedDataSignature } } = jsigs;
 
 // Use the security context v2 which supports JsonWebKey2020
@@ -14,6 +13,9 @@ const SUITE_CONTEXT_URL = 'https://w3id.org/security/suites/jws-2020/v1';
 
 // multibase base58-btc header
 const MULTIBASE_BASE58BTC_HEADER = 'z';
+
+// Web Crypto API (available in modern browsers and Node.js 15+)
+const crypto = globalThis.crypto;
 
 /**
  * ES256Signature2020 suite for creating and verifying Data Integrity Proofs
@@ -57,7 +59,7 @@ export class ES256Signature2020 extends LinkedDataSignature {
   constructor({
     key, signer, verifier, proof, date, useNativeCanonize, canonizeOptions
   }: any = {}) {
-    // If no signer is provided, create a default signer using jose and attach it to the key
+    // If no signer is provided, create a default signer using Web Crypto API
     if (!signer && key && key.privateKey && !key.signer) {
       key.signer = ES256Signature2020._createDefaultSigner(key);
     }
@@ -78,7 +80,25 @@ export class ES256Signature2020 extends LinkedDataSignature {
   }
 
   /**
-   * Creates a default signer function for ES256 signing using jose library.
+   * Imports a JWK into a Web Crypto API CryptoKey.
+   * 
+   * @param {object} jwk - The JSON Web Key to import.
+   * @param {string} usage - Key usage: 'sign' or 'verify'.
+   * @returns {Promise<CryptoKey>} The imported CryptoKey.
+   * @private
+   */
+  private static async _importKey(jwk: any, usage: 'sign' | 'verify'): Promise<CryptoKey> {
+    return await crypto.subtle.importKey(
+      'jwk',
+      jwk,
+      { name: 'ECDSA', namedCurve: 'P-256' },
+      false,
+      [usage]
+    );
+  }
+
+  /**
+   * Creates a default signer function for ES256 signing using Web Crypto API.
    * 
    * @param {object} key - Key object containing the private key in JWK format.
    * @returns {Function} A signer function that returns an object with a sign method.
@@ -87,48 +107,40 @@ export class ES256Signature2020 extends LinkedDataSignature {
   private static _createDefaultSigner(key: any): () => any {
     return () => ({
       sign: async (options: { data: Uint8Array }): Promise<Uint8Array> => {
-        // Import the private key using jose
-        const privateKeyJwk = key.privateKey as jose.JWK;
-        const privateKey = await jose.importJWK(privateKeyJwk, 'ES256');
+        // Import the private key
+        const privateKey = await ES256Signature2020._importKey(key.privateKey, 'sign');
 
-        // Sign the raw bytes using jose's FlattenedSign
-        // The data is already the canonicalized hash from LinkedDataSignature
-        const jws = await new jose.FlattenedSign(options.data)
-          .setProtectedHeader({ alg: 'ES256' })
-          .sign(privateKey);
+        const signature = await crypto.subtle.sign(
+          { name: 'ECDSA', hash: 'SHA-256' },
+          privateKey,
+          options.data as BufferSource
+        );
 
-        // Extract the signature from the JWS object
-        // We only need the raw signature bytes
-        return jose.base64url.decode(jws.signature);
+        return new Uint8Array(signature);
       },
     });
   }
 
   /**
-   * Creates a default verifier function for ES256 verification using jose library.
+   * Creates a default verifier function for ES256 verification using Web Crypto API.
    * 
    * @param {object} publicKeyJwk - Public key in JWK format.
    * @returns {Promise<object>} A verifier object with a verify method.
    * @private
    */
   private static async _createDefaultVerifier(publicKeyJwk: any): Promise<any> {
-    const publicKey = await jose.importJWK(publicKeyJwk, 'ES256');
+    // Import the public key
+    const publicKey = await ES256Signature2020._importKey(publicKeyJwk, 'verify');
     
     return {
       async verify({ data, signature }: { data: Uint8Array; signature: Uint8Array }): Promise<boolean> {
         try {
-          // Reconstruct a flattened JWS for verification
-          const jws = {
-            protected: jose.base64url.encode(
-              new TextEncoder().encode(JSON.stringify({ alg: 'ES256' }))
-            ),
-            payload: jose.base64url.encode(data),
-            signature: jose.base64url.encode(signature)
-          };
-          
-          // Verify using jose's flattenedVerify
-          await jose.flattenedVerify(jws, publicKey);
-          return true;
+          return await crypto.subtle.verify(
+            { name: 'ECDSA', hash: 'SHA-256' },
+            publicKey,
+            signature as BufferSource,
+            data as BufferSource
+          );
         } catch (e) {
           return false;
         }

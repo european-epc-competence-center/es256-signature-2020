@@ -9,8 +9,6 @@ import jsigs from 'jsonld-signatures';
 import { ES256Signature2020 } from '../lib/ES256Signature2020';
 import { mockCredential } from './mock-data';
 import { createDocumentLoader, createDidDocument } from './documentLoader';
-// @ts-ignore
-import * as EcdsaMultikey from '@digitalbazaar/ecdsa-multikey';
 
 const { purposes: { AssertionProofPurpose } } = jsigs;
 
@@ -81,6 +79,10 @@ describe('ES256Signature2020', () => {
     });
 
     it('should sign and verify a credential using EcdsaMultikey', async () => {
+      // Dynamically import ES module to avoid CommonJS/ESM interop issues
+      // @ts-ignore
+      const EcdsaMultikey = await import('@digitalbazaar/ecdsa-multikey');
+      
       // Create EcdsaMultikey from the existing keyPair's JWK
       const ecdsaMultikey = await EcdsaMultikey.fromJwk({
         jwk: keyPair.privateKeyJwk,

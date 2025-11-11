@@ -3,8 +3,6 @@
  * Based on Ed25519Signature2020 implementation pattern from Digital Bazaar
  */
 // @ts-ignore
-import * as base58btc from 'base58-universal';
-// @ts-ignore
 import jsigs from 'jsonld-signatures';
 const { suites: { LinkedDataSignature } } = jsigs;
 
@@ -166,6 +164,10 @@ export class ES256Signature2020 extends LinkedDataSignature {
       throw new Error('A signer API has not been specified.');
     }
 
+    // Dynamically import ES module to avoid CommonJS/ESM interop issues
+    // @ts-ignore
+    const base58btc = await import('base58-universal');
+    
     const signatureBytes = await this.signer.sign({ data: verifyData });
     proof.proofValue =
       MULTIBASE_BASE58BTC_HEADER + base58btc.encode(signatureBytes);
@@ -192,6 +194,10 @@ export class ES256Signature2020 extends LinkedDataSignature {
     if (proofValue[0] !== MULTIBASE_BASE58BTC_HEADER) {
       throw new Error('Only base58btc multibase encoding is supported.');
     }
+    
+    // Dynamically import ES module to avoid CommonJS/ESM interop issues
+    // @ts-ignore
+    const base58btc = await import('base58-universal');
     const signatureBytes = base58btc.decode(proofValue.substr(1));
 
     let { verifier } = this;

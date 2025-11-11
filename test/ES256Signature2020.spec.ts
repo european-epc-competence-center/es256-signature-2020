@@ -46,7 +46,6 @@ describe('ES256Signature2020', () => {
         id: keyPair.id,
         type: keyPair.type,
         controller: keyPair.controller,
-        publicKey: keyPair.publicKeyJwk,
         privateKey: keyPair.privateKeyJwk
       };
 

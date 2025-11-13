@@ -59,7 +59,7 @@ describe('ES256Signature2020', () => {
 
       // Verify the credential has a proof
       expect(signedCredential).to.have.property('proof');
-      expect(signedCredential.proof).to.have.property('type', 'EcdsaSecp256r1Signature2019');
+      expect(signedCredential.proof).to.have.property('type', 'JsonWebSignature2020');
       expect(signedCredential.proof).to.have.property('proofValue');
       expect(signedCredential.proof.proofValue).to.match(/^z/);
 
@@ -103,7 +103,7 @@ describe('ES256Signature2020', () => {
 
       // Verify the credential has a proof
       expect(signedCredential).to.have.property('proof');
-      expect(signedCredential.proof).to.have.property('type', 'EcdsaSecp256r1Signature2019');
+      expect(signedCredential.proof).to.have.property('type', 'JsonWebSignature2020');
       expect(signedCredential.proof).to.have.property('proofValue');
       expect(signedCredential.proof.proofValue).to.match(/^z/);
       

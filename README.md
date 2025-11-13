@@ -75,7 +75,7 @@ console.log(JSON.stringify(signedCredential, null, 2));
     "id": "did:example:ebfeb1f712ebc6f1c276e12ec21"
   },
   "proof": {
-    "type": "EcdsaSecp256r1Signature2019",
+    "type": "JsonWebSignature2020",
     "created": "2024-11-06T10:23:45Z",
     "verificationMethod": "did:web:example.com#keys-1",
     "proofPurpose": "assertionMethod",

@@ -63,7 +63,7 @@ export class ES256Signature2020 extends LinkedDataSignature {
     }
 
     super({
-      type: 'EcdsaSecp256r1Signature2019',
+      type: 'JsonWebSignature2020',
       contextUrl: SUITE_CONTEXT_URL,
       key, signer, verifier, proof, date, useNativeCanonize,
       canonizeOptions

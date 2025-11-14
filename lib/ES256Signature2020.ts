@@ -4,6 +4,8 @@
  */
 // @ts-ignore
 import jsigs from 'jsonld-signatures';
+// @ts-ignore
+import * as base58btc from 'base58-universal';
 const { suites: { LinkedDataSignature } } = jsigs;
 
 // Use the security context v2 which supports JsonWebKey2020
@@ -164,10 +166,6 @@ export class ES256Signature2020 extends LinkedDataSignature {
       throw new Error('A signer API has not been specified.');
     }
 
-    // Dynamically import ES module to avoid CommonJS/ESM interop issues
-    // @ts-ignore
-    const base58btc = await import('base58-universal');
-    
     const signatureBytes = await this.signer.sign({ data: verifyData });
     proof.proofValue =
       MULTIBASE_BASE58BTC_HEADER + base58btc.encode(signatureBytes);
@@ -195,9 +193,6 @@ export class ES256Signature2020 extends LinkedDataSignature {
       throw new Error('Only base58btc multibase encoding is supported.');
     }
     
-    // Dynamically import ES module to avoid CommonJS/ESM interop issues
-    // @ts-ignore
-    const base58btc = await import('base58-universal');
     const signatureBytes = base58btc.decode(proofValue.substr(1));
 
     let { verifier } = this;

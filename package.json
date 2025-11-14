@@ -2,15 +2,21 @@
   "name": "@eecc/es256-signature-2020",
   "version": "1.1.2",
   "description": "ES256Signature2020 Linked Data Proof suite for use with jsonld-signatures using ECDSA with P-256 curve.",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "exports": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "files": [
     "dist/"
   ],
   "scripts": {
     "test": "npm run test-node",
-    "test-node": "cross-env NODE_ENV=test mocha --preserve-symlinks -t 30000 -A -R ${REPORTER:-spec} --require test/test-mocha.js test/*.spec.ts",
+    "test-node": "cross-env NODE_ENV=test NODE_OPTIONS='--loader ts-node/esm' mocha --preserve-symlinks -t 30000 -A -R ${REPORTER:-spec} test/*.spec.ts",
     "coverage": "cross-env NODE_ENV=test c8 npm run test-node",
     "coverage-ci": "cross-env NODE_ENV=test c8 --reporter=lcovonly --reporter=text-summary --reporter=text npm run test-node",
     "coverage-report": "c8 report",

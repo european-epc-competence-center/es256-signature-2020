@@ -4,7 +4,7 @@
 
 // @ts-ignore
 import { securityLoader } from '@digitalbazaar/security-document-loader';
-import { jwsContext } from './mock-data';
+import { jwsContext } from './mock-data.js';
 
 /**
  * Creates a document loader configured with security contexts and test documents

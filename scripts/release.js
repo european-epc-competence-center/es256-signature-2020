@@ -9,7 +9,7 @@ const colors = {
   reset: "\x1b[0m",
   bright: "\x1b[1m",
   red: "\x1b[31m",
-  green: "\x1b[32m",
+  green: "\x1b[32m",publish as ES Module
   yellow: "\x1b[33m",
   blue: "\x1b[34m",
   cyan: "\x1b[36m",
@@ -21,15 +21,15 @@ function log(message, color = "reset") {
 
 function getCurrentVersion() {
   const packagePath = path.join(__dirname, "..", "package.json");
-  const package = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-  return package.version;
+  const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+  return pkg.version;
 }
 
 function updatePackageVersion(newVersion) {
   const packagePath = path.join(__dirname, "..", "package.json");
-  const package = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-  package.version = newVersion;
-  fs.writeFileSync(packagePath, JSON.stringify(package, null, 2) + "\n");
+  const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+  pkg.version = newVersion;
+  fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + "\n");
   log(`✓ Updated package.json version to ${newVersion}`, "green");
 }
 
